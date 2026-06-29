@@ -51,6 +51,57 @@ const friendInput = document.getElementById("friendInput");
 const addFriendButton = document.getElementById("addFriendButton");
 const friendList = document.getElementById("friendList");
 const placementHint = document.getElementById("placementHint");
+const joinModal = document.getElementById("joinModal");
+const joinBtn = document.getElementById("joinBtn");
+const joinName = document.getElementById("joinName");
+const joinRoom = document.getElementById("joinRoom");
+
+let ws = null;
+
+function connectWs(roomId, name) {
+  const protocol = location.protocol === "https:" ? "wss:" : "ws:";
+  const url = `${protocol}//${location.host}/ws`;
+  ws = new WebSocket(url);
+  ws.addEventListener("open", () => {
+    ws.send(JSON.stringify({ type: "join", room: roomId, name }));
+    state.roomId = roomId;
+    state.userName = name;
+    joinModal.classList.add("hidden");
+    showToast(`Odaya katıldın: ${roomId}`);
+  });
+
+  ws.addEventListener("message", (ev) => {
+    try {
+      const msg = JSON.parse(ev.data);
+      if (msg.type === "init") {
+        state.roomItems = msg.items || [];
+        state.roomFriends = msg.users || [];
+        renderRoomItems();
+        renderRoomObjects();
+        renderFriends();
+      }
+      if (msg.type === "presence") {
+        state.roomFriends = msg.users || [];
+        renderFriends();
+      }
+      if (msg.type === "item_placed") {
+        const item = msg.item;
+        if (!state.roomItems.find((i) => i.id === item.id)) {
+          state.roomItems.push(item);
+          renderRoomItems();
+          renderRoomObjects();
+        }
+      }
+      if (msg.type === "item_removed") {
+        state.roomItems = state.roomItems.filter((i) => i.id !== msg.id);
+        renderRoomItems();
+        renderRoomObjects();
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  });
+}
 
 function updateBars() {
   hungerBar.style.width = `${state.hunger}%`;
@@ -163,6 +214,9 @@ function renderRoomObjects() {
       renderRoomItems();
       renderRoomObjects();
       showToast(`${item.label} kaldırıldı`);
+      if (ws && state.roomId) {
+        try { ws.send(JSON.stringify({ type: "remove_item", room: state.roomId, id: item.id })); } catch (e) {}
+      }
     });
     roomScene.appendChild(element);
   });
@@ -356,6 +410,9 @@ roomScene.addEventListener("click", (event) => {
   renderRoomItems();
   renderRoomObjects();
   showToast(`${item.label} odada yerleştirildi`);
+  if (ws && state.roomId) {
+    try { ws.send(JSON.stringify({ type: "place_item", room: state.roomId, item })); } catch (e) {}
+  }
 });
 
 exploreButtons.forEach((button) => {
@@ -391,6 +448,15 @@ friendInput.addEventListener("keydown", (event) => {
     addFriend();
   }
 });
+
+joinBtn.addEventListener("click", () => {
+  const name = (joinName.value || "").trim() || `Guest${Math.floor(Math.random()*900)+100}`;
+  const room = (joinRoom.value || "").trim() || "lobby";
+  connectWs(room, name);
+});
+
+joinName.addEventListener("keydown", (e) => { if (e.key === 'Enter') joinBtn.click(); });
+joinRoom.addEventListener("keydown", (e) => { if (e.key === 'Enter') joinBtn.click(); });
 
 renderMovies();
 renderOrders();

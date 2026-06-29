@@ -434,11 +434,18 @@ button.primary {
   display: grid;
   place-items: center;
   padding: 20px;
+  z-index: 9999;
 }
 
 .modal.hidden, .toast.hidden {
   display: none;
 }
+
+#joinModal .modal-card { max-width: 420px; width: 100%; }
+
+/* Ensure modal backdrop prevents underlying interactions visually and logically */
+.modal { pointer-events: auto; }
+.modal .modal-card { position: relative; z-index: 10000; }
 
 .modal-card {
   width: min(900px, 100%);
