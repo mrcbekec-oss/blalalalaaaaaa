@@ -21,7 +21,20 @@
 
       <main class="main-grid">
         <section class="room-card">
+          <div class="explore-hud">
+            <p>Fareyle sürükleyin veya mobilde parmağınızla gezinin.</p>
+            <div class="explore-controls">
+              <button data-dir="up">↑</button>
+              <button data-dir="left">←</button>
+              <button data-dir="right">→</button>
+              <button data-dir="down">↓</button>
+              <button data-dir="reset" class="secondary">Reset</button>
+            </div>
+          </div>
           <div class="room-scene">
+            <div id="placementHint" class="placement-hint hidden">
+              Nesne yerleştirmek için odaya tıkla.
+            </div>
             <div class="sofa"></div>
             <div class="tv-frame">
               <div class="tv-screen">
@@ -42,12 +55,16 @@
             <h2>Canlı durum</h2>
             <div class="stat-row">
               <label>Açlık</label>
-              <div class="bar"><div id="hungerBar" class="fill hunger"></div></div>
+              <div class="bar">
+                <div id="hungerBar" class="fill hunger"></div>
+              </div>
               <span id="hungerValue">80%</span>
             </div>
             <div class="stat-row">
               <label>Susuzluk</label>
-              <div class="bar"><div id="thirstBar" class="fill thirst"></div></div>
+              <div class="bar">
+                <div id="thirstBar" class="fill thirst"></div>
+              </div>
               <span id="thirstValue">75%</span>
             </div>
           </div>
@@ -60,6 +77,37 @@
               <button data-order="water">Su</button>
               <button data-order="cola">Kola</button>
             </div>
+            <div id="orderList" class="order-list"></div>
+          </div>
+
+          <div class="section-block">
+            <h2>Oda düzenle</h2>
+            <label class="field-label" for="itemSelect">Nesne seç</label>
+            <select id="itemSelect" class="select-input">
+              <option value="lamp">Lamba</option>
+              <option value="plant">Bitki</option>
+              <option value="table">Masa</option>
+              <option value="chair">Koltuk</option>
+              <option value="poster">Poster</option>
+            </select>
+            <div class="button-row">
+              <button id="placeModeButton" class="primary">Nesne ekle</button>
+              <button id="clearItemsButton">Temizle</button>
+            </div>
+            <div id="roomItems" class="pill-list"></div>
+          </div>
+
+          <div class="section-block">
+            <h2>Arkadaşlar</h2>
+            <div class="inline-field">
+              <input
+                id="friendInput"
+                type="text"
+                placeholder="Arkadaş adı..."
+              />
+              <button id="addFriendButton">Ekle</button>
+            </div>
+            <div id="friendList" class="pill-list"></div>
           </div>
 
           <div class="section-block">
@@ -78,7 +126,10 @@
           <button id="closeModal" class="icon-btn">×</button>
         </div>
         <video id="moviePlayer" controls autoplay playsinline>
-          <source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4" />
+          <source
+            src="https://www.w3schools.com/html/mov_bbb.mp4"
+            type="video/mp4"
+          />
         </video>
       </div>
     </div>

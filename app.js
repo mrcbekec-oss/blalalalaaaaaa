@@ -2,25 +2,55 @@ const state = {
   hunger: 80,
   thirst: 75,
   selectedMovie: 0,
+  cameraX: 0,
+  cameraY: 0,
+  pendingOrders: [],
+  drag: null,
+  placingItem: false,
+  roomItems: [],
+  roomFriends: [],
 };
 
 const movies = [
-  { title: 'Yıldız Savaşçıları: Gece', genre: 'Bilim Kurgu', video: 'https://www.w3schools.com/html/mov_bbb.mp4' },
-  { title: 'Gülümseme Partisi', genre: 'Komedi', video: 'https://www.w3schools.com/html/mov_bbb.mp4' },
-  { title: 'Gece Yolculuğu', genre: 'Dram', video: 'https://www.w3schools.com/html/mov_bbb.mp4' },
+  {
+    title: "Yıldız Savaşçıları: Gece",
+    genre: "Bilim Kurgu",
+    video: "https://www.w3schools.com/html/mov_bbb.mp4",
+  },
+  {
+    title: "Gülümseme Partisi",
+    genre: "Komedi",
+    video: "https://www.w3schools.com/html/mov_bbb.mp4",
+  },
+  {
+    title: "Gece Yolculuğu",
+    genre: "Dram",
+    video: "https://www.w3schools.com/html/mov_bbb.mp4",
+  },
 ];
 
-const hungerBar = document.getElementById('hungerBar');
-const thirstBar = document.getElementById('thirstBar');
-const hungerValue = document.getElementById('hungerValue');
-const thirstValue = document.getElementById('thirstValue');
-const movieList = document.getElementById('movieList');
-const playButton = document.getElementById('playButton');
-const modal = document.getElementById('movieModal');
-const modalTitle = document.getElementById('modalTitle');
-const closeModal = document.getElementById('closeModal');
-const moviePlayer = document.getElementById('moviePlayer');
-const toast = document.getElementById('toast');
+const hungerBar = document.getElementById("hungerBar");
+const thirstBar = document.getElementById("thirstBar");
+const hungerValue = document.getElementById("hungerValue");
+const thirstValue = document.getElementById("thirstValue");
+const movieList = document.getElementById("movieList");
+const playButton = document.getElementById("playButton");
+const modal = document.getElementById("movieModal");
+const modalTitle = document.getElementById("modalTitle");
+const closeModal = document.getElementById("closeModal");
+const moviePlayer = document.getElementById("moviePlayer");
+const toast = document.getElementById("toast");
+const orderList = document.getElementById("orderList");
+const roomScene = document.querySelector(".room-scene");
+const exploreButtons = document.querySelectorAll("[data-dir]");
+const itemSelect = document.getElementById("itemSelect");
+const placeModeButton = document.getElementById("placeModeButton");
+const clearItemsButton = document.getElementById("clearItemsButton");
+const roomItemsList = document.getElementById("roomItems");
+const friendInput = document.getElementById("friendInput");
+const addFriendButton = document.getElementById("addFriendButton");
+const friendList = document.getElementById("friendList");
+const placementHint = document.getElementById("placementHint");
 
 function updateBars() {
   hungerBar.style.width = `${state.hunger}%`;
@@ -31,18 +61,60 @@ function updateBars() {
 
 function showToast(message) {
   toast.textContent = message;
-  toast.classList.remove('hidden');
+  toast.classList.remove("hidden");
   clearTimeout(showToast.timeout);
-  showToast.timeout = setTimeout(() => toast.classList.add('hidden'), 1800);
+  showToast.timeout = setTimeout(() => toast.classList.add("hidden"), 2200);
+}
+
+function setCameraTransform() {
+  roomScene.style.transform =
+    `translate(${state.cameraX}px, ${state.cameraY}px)`;
+}
+
+function moveCamera(dx, dy) {
+  state.cameraX += dx;
+  state.cameraY += dy;
+  setCameraTransform();
+}
+
+function renderOrders() {
+  if (state.pendingOrders.length === 0) {
+    orderList.innerHTML = '<div class="order-empty">Henüz sipariş yok.</div>';
+    return;
+  }
+
+  orderList.innerHTML = "";
+  state.pendingOrders.forEach((order) => {
+    const minutes = Math.floor(order.remaining / 60);
+    const seconds = order.remaining % 60;
+    const item = document.createElement("div");
+    item.className = "order-item";
+    item.innerHTML = `<span>${order.label}</span><small>${minutes}:${
+      seconds.toString().padStart(2, "0")
+    }</small>`;
+    orderList.appendChild(item);
+  });
+}
+
+function tickOrders() {
+  state.pendingOrders = state.pendingOrders
+    .map((order) => ({
+      ...order,
+      remaining: Math.max(0, Math.ceil((order.readyAt - Date.now()) / 1000)),
+    }))
+    .filter((order) => order.remaining > 0);
+  renderOrders();
 }
 
 function renderMovies() {
-  movieList.innerHTML = '';
+  movieList.innerHTML = "";
   movies.forEach((movie, index) => {
-    const item = document.createElement('button');
-    item.className = `movie-option ${index === state.selectedMovie ? 'active' : ''}`;
+    const item = document.createElement("button");
+    item.className = `movie-option ${
+      index === state.selectedMovie ? "active" : ""
+    }`;
     item.innerHTML = `<span>${movie.title}</span><small>${movie.genre}</small>`;
-    item.addEventListener('click', () => {
+    item.addEventListener("click", () => {
       state.selectedMovie = index;
       renderMovies();
       showToast(`${movie.title} seçildi`);
@@ -51,31 +123,160 @@ function renderMovies() {
   });
 }
 
+function renderRoomItems() {
+  roomItemsList.innerHTML = "";
+
+  if (state.roomItems.length === 0) {
+    roomItemsList.innerHTML = '<div class="order-empty">Henüz nesne yok.</div>';
+    return;
+  }
+
+  state.roomItems.forEach((item) => {
+    const chip = document.createElement("button");
+    chip.className = "pill";
+    chip.textContent = item.label;
+    chip.addEventListener("click", () => {
+      state.roomItems = state.roomItems.filter((entry) => entry.id !== item.id);
+      renderRoomItems();
+      renderRoomObjects();
+      showToast(`${item.label} kaldırıldı`);
+    });
+    roomItemsList.appendChild(chip);
+  });
+}
+
+function renderRoomObjects() {
+  roomScene.querySelectorAll(".room-object").forEach((element) =>
+    element.remove()
+  );
+
+  state.roomItems.forEach((item) => {
+    const element = document.createElement("div");
+    element.className = `room-object ${item.kind}`;
+    element.dataset.id = item.id;
+    element.style.left = `${item.x}%`;
+    element.style.top = `${item.y}%`;
+    element.addEventListener("click", (event) => {
+      event.stopPropagation();
+      if (state.placingItem) return;
+      state.roomItems = state.roomItems.filter((entry) => entry.id !== item.id);
+      renderRoomItems();
+      renderRoomObjects();
+      showToast(`${item.label} kaldırıldı`);
+    });
+    roomScene.appendChild(element);
+  });
+}
+
+function renderFriends() {
+  friendList.innerHTML = "";
+
+  if (state.roomFriends.length === 0) {
+    friendList.innerHTML = '<div class="order-empty">Henüz arkadaş yok.</div>';
+    return;
+  }
+
+  state.roomFriends.forEach((friend) => {
+    const chip = document.createElement("div");
+    chip.className = "pill";
+    chip.textContent = friend;
+    friendList.appendChild(chip);
+  });
+}
+
+function setPlaceMode(active) {
+  state.placingItem = active;
+  placeModeButton.classList.toggle("active", active);
+  placeModeButton.textContent = active ? "İptal et" : "Nesne ekle";
+  roomScene.classList.toggle("placing", active);
+  placementHint.classList.toggle("hidden", !active);
+}
+
+function addRoomItem() {
+  const kind = itemSelect.value;
+  const labels = {
+    lamp: "Lamba",
+    plant: "Bitki",
+    table: "Masa",
+    chair: "Koltuk",
+    poster: "Poster",
+  };
+
+  const item = {
+    id: Date.now(),
+    kind,
+    label: labels[kind],
+    x: 50,
+    y: 50,
+  };
+
+  state.roomItems.push(item);
+  renderRoomItems();
+  renderRoomObjects();
+  showToast(`${item.label} eklendi`);
+}
+
+function addFriend() {
+  const name = friendInput.value.trim();
+  if (!name) return;
+
+  state.roomFriends.push(name);
+  friendInput.value = "";
+  renderFriends();
+  showToast(`${name} arkadaş listesine eklendi`);
+}
+
 function openMovie() {
   const movie = movies[state.selectedMovie];
   modalTitle.textContent = movie.title;
   moviePlayer.src = movie.video;
   moviePlayer.load();
-  modal.classList.remove('hidden');
-  modal.setAttribute('aria-hidden', 'false');
+  modal.classList.remove("hidden");
+  modal.setAttribute("aria-hidden", "false");
 }
 
 function closeMovie() {
   moviePlayer.pause();
-  modal.classList.add('hidden');
-  modal.setAttribute('aria-hidden', 'true');
+  modal.classList.add("hidden");
+  modal.setAttribute("aria-hidden", "true");
 }
 
 function handleOrder(type) {
-  if (type === 'pizza' || type === 'burger') {
-    state.hunger = Math.min(100, state.hunger + 18);
-    showToast('Yemek siparişi geldi!');
-  }
-  if (type === 'water' || type === 'cola') {
-    state.thirst = Math.min(100, state.thirst + 18);
-    showToast('İçecek siparişi geldi!');
-  }
-  updateBars();
+  const labels = {
+    pizza: "Pizza",
+    burger: "Burger",
+    water: "Su",
+    cola: "Kola",
+  };
+
+  const label = labels[type];
+  const order = {
+    id: Date.now(),
+    label,
+    type,
+    remaining: 120,
+    readyAt: Date.now() + 120000,
+  };
+
+  state.pendingOrders.push(order);
+  renderOrders();
+  showToast(`${label} siparişi verildi. 2 dakika sonra gelecek.`);
+
+  window.setTimeout(() => {
+    if (type === "pizza" || type === "burger") {
+      state.hunger = Math.min(100, state.hunger + 18);
+    }
+    if (type === "water" || type === "cola") {
+      state.thirst = Math.min(100, state.thirst + 18);
+    }
+
+    state.pendingOrders = state.pendingOrders.filter((item) =>
+      item.id !== order.id
+    );
+    renderOrders();
+    updateBars();
+    showToast(`${label} teslim edildi!`);
+  }, 120000);
 }
 
 setInterval(() => {
@@ -84,18 +285,117 @@ setInterval(() => {
   updateBars();
 }, 5000);
 
-document.querySelectorAll('[data-order]').forEach((button) => {
-  button.addEventListener('click', () => handleOrder(button.dataset.order));
+setInterval(tickOrders, 1000);
+
+document.querySelectorAll("[data-order]").forEach((button) => {
+  button.addEventListener("click", () => handleOrder(button.dataset.order));
 });
 
-playButton.addEventListener('click', openMovie);
-closeModal.addEventListener('click', closeMovie);
-modal.addEventListener('click', (event) => {
+playButton.addEventListener("click", openMovie);
+closeModal.addEventListener("click", closeMovie);
+modal.addEventListener("click", (event) => {
   if (event.target === modal) closeMovie();
 });
-document.addEventListener('keydown', (event) => {
-  if (event.key === 'Escape') closeMovie();
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") closeMovie();
+});
+
+roomScene.addEventListener("pointerdown", (event) => {
+  if (state.placingItem) return;
+
+  state.drag = {
+    startX: event.clientX,
+    startY: event.clientY,
+    initialX: state.cameraX,
+    initialY: state.cameraY,
+  };
+  roomScene.classList.add("dragging");
+  roomScene.setPointerCapture(event.pointerId);
+});
+
+roomScene.addEventListener("pointermove", (event) => {
+  if (!state.drag) return;
+  const dx = event.clientX - state.drag.startX;
+  const dy = event.clientY - state.drag.startY;
+  state.cameraX = state.drag.initialX + dx;
+  state.cameraY = state.drag.initialY + dy;
+  setCameraTransform();
+});
+
+const stopDragging = (event) => {
+  if (!state.drag) return;
+  roomScene.classList.remove("dragging");
+  state.drag = null;
+  roomScene.releasePointerCapture(event.pointerId);
+};
+
+roomScene.addEventListener("pointerup", stopDragging);
+roomScene.addEventListener("pointerleave", stopDragging);
+roomScene.addEventListener("pointercancel", stopDragging);
+roomScene.addEventListener("click", (event) => {
+  if (!state.placingItem) return;
+
+  const rect = roomScene.getBoundingClientRect();
+  const x = ((event.clientX - rect.left) / rect.width) * 100;
+  const y = ((event.clientY - rect.top) / rect.height) * 100;
+  const item = {
+    id: Date.now(),
+    kind: itemSelect.value,
+    label: {
+      lamp: "Lamba",
+      plant: "Bitki",
+      table: "Masa",
+      chair: "Koltuk",
+      poster: "Poster",
+    }[itemSelect.value],
+    x: Math.max(8, Math.min(92, x)),
+    y: Math.max(10, Math.min(90, y)),
+  };
+
+  state.roomItems.push(item);
+  renderRoomItems();
+  renderRoomObjects();
+  showToast(`${item.label} odada yerleştirildi`);
+});
+
+exploreButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    const action = button.dataset.dir;
+    if (action === "up") moveCamera(0, 40);
+    if (action === "down") moveCamera(0, -40);
+    if (action === "left") moveCamera(40, 0);
+    if (action === "right") moveCamera(-40, 0);
+    if (action === "reset") {
+      state.cameraX = 0;
+      state.cameraY = 0;
+      setCameraTransform();
+    }
+  });
+});
+
+placeModeButton.addEventListener("click", () => {
+  setPlaceMode(!state.placingItem);
+});
+
+clearItemsButton.addEventListener("click", () => {
+  state.roomItems = [];
+  renderRoomItems();
+  renderRoomObjects();
+  showToast("Oda temizlendi");
+});
+
+addFriendButton.addEventListener("click", addFriend);
+friendInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    addFriend();
+  }
 });
 
 renderMovies();
+renderOrders();
+renderRoomItems();
+renderRoomObjects();
+renderFriends();
 updateBars();
+setPlaceMode(false);
