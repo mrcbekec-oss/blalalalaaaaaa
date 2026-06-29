@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sanal Oda</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Online Sanal Oda</p>
+          <h1>Film, yemek ve keyif bir arada</h1>
+        </div>
+        <div class="status-pill">
+          <span class="status-dot"></span>
+          Online · Oda #42
+        </div>
+      </header>
+
+      <main class="main-grid">
+        <section class="room-card">
+          <div class="room-scene">
+            <div class="sofa"></div>
+            <div class="tv-frame">
+              <div class="tv-screen">
+                <p>TV ekranı</p>
+                <span>Seçtiğin filmi burada aç</span>
+              </div>
+            </div>
+            <div class="snack-bar">
+              <div class="snack-item"></div>
+              <div class="snack-item"></div>
+              <div class="snack-item"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="control-card">
+          <div class="section-block">
+            <h2>Canlı durum</h2>
+            <div class="stat-row">
+              <label>Açlık</label>
+              <div class="bar"><div id="hungerBar" class="fill hunger"></div></div>
+              <span id="hungerValue">80%</span>
+            </div>
+            <div class="stat-row">
+              <label>Susuzluk</label>
+              <div class="bar"><div id="thirstBar" class="fill thirst"></div></div>
+              <span id="thirstValue">75%</span>
+            </div>
+          </div>
+
+          <div class="section-block">
+            <h2>Sipariş ver</h2>
+            <div class="button-row">
+              <button data-order="pizza">Pizza</button>
+              <button data-order="burger">Burger</button>
+              <button data-order="water">Su</button>
+              <button data-order="cola">Kola</button>
+            </div>
+          </div>
+
+          <div class="section-block">
+            <h2>Film seç</h2>
+            <div id="movieList" class="movie-list"></div>
+            <button id="playButton" class="primary">Filmi aç</button>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div id="movieModal" class="modal hidden" aria-hidden="true">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 id="modalTitle">Film</h3>
+          <button id="closeModal" class="icon-btn">×</button>
+        </div>
+        <video id="moviePlayer" controls autoplay playsinline>
+          <source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4" />
+        </video>
+      </div>
+    </div>
+
+    <div id="toast" class="toast hidden"></div>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
