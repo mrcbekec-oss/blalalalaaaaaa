@@ -106,5 +106,6 @@ function broadcast(room: string, message: any) {
   }
 }
 
-console.log("Sunucu çalışıyor: http://localhost:8000");
-serve(handler, { port: 8000 });
+const port = Number(Deno.env.get("PORT") || 8000);
+console.log(`Sunucu çalışıyor: http://localhost:${port}`);
+serve(handler, { port });

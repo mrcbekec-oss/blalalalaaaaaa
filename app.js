@@ -9,6 +9,7 @@ const state = {
   placingItem: false,
   roomItems: [],
   roomFriends: [],
+  isConnected: false,
 };
 
 const movies = [
@@ -59,20 +60,48 @@ const joinRoom = document.getElementById("joinRoom");
 let ws = null;
 
 function connectWs(roomId, name) {
+  state.roomId = roomId;
+  state.userName = name;
+  state.isConnected = false;
+  joinModal.classList.add("hidden");
+  showToast("Katılma deneniyor...");
+
+  const fallbackTimer = window.setTimeout(() => {
+    if (!state.isConnected) {
+      showToast("Bağlantı kurulamadı; yerel modda devam ediyorsun.");
+    }
+  }, 1400);
+
+  if (typeof WebSocket === "undefined") {
+    clearTimeout(fallbackTimer);
+    showToast("Tarayıcınız WebSocket desteklemiyor; yerel modda devam ediyorsun.");
+    return;
+  }
+
   const protocol = location.protocol === "https:" ? "wss:" : "ws:";
   const url = `${protocol}//${location.host}/ws`;
-  ws = new WebSocket(url);
+
+  try {
+    ws = new WebSocket(url);
+  } catch (error) {
+    clearTimeout(fallbackTimer);
+    showToast("Bağlantı kurulamadı; yerel modda devam ediyorsun.");
+    return;
+  }
+
   ws.addEventListener("open", () => {
+    clearTimeout(fallbackTimer);
+    state.isConnected = true;
     ws.send(JSON.stringify({ type: "join", room: roomId, name }));
-    state.roomId = roomId;
-    state.userName = name;
-    joinModal.classList.add("hidden");
     showToast(`Odaya katıldın: ${roomId}`);
   });
   ws.addEventListener("error", () => {
-    showToast("Bağlantı hatası. Sunucu çalışıyor mu?");
+    if (state.isConnected) return;
+    clearTimeout(fallbackTimer);
+    showToast("Bağlantı kurulamadı; yerel modda devam ediyorsun.");
   });
   ws.addEventListener("close", () => {
+    if (!state.isConnected) return;
     showToast("Bağlantı kesildi.");
   });
 
