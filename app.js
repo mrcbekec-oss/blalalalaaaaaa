@@ -69,6 +69,12 @@ function connectWs(roomId, name) {
     joinModal.classList.add("hidden");
     showToast(`Odaya katıldın: ${roomId}`);
   });
+  ws.addEventListener("error", () => {
+    showToast("Bağlantı hatası. Sunucu çalışıyor mu?");
+  });
+  ws.addEventListener("close", () => {
+    showToast("Bağlantı kesildi.");
+  });
 
   ws.addEventListener("message", (ev) => {
     try {
